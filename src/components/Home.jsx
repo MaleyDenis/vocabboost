@@ -5,15 +5,10 @@ import { api, clearSecret } from "../api";
 // tiles: existing ones as cards, the rest as "add" tiles (tap = create). One
 // dictionary per language — the UI only offers languages you don't have yet.
 const LANGUAGES = [
-  { code: "en", label: "English", flag: "🇬🇧" },
-  { code: "pl", label: "Polski", flag: "🇵🇱" },
-  { code: "de", label: "Deutsch", flag: "🇩🇪" },
-  { code: "es", label: "Español", flag: "🇪🇸" },
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "it", label: "Italiano", flag: "🇮🇹" },
+  { code: "en", label: "English" },
+  { code: "it", label: "Italiano" },
+  { code: "pl", label: "Polski" },
 ];
-
-const flagFor = (code) => LANGUAGES.find((l) => l.code === code)?.flag ?? "🏳️";
 
 export default function Home({ onLogout }) {
   const [dictionaries, setDictionaries] = useState(null);
@@ -105,8 +100,8 @@ export default function Home({ onLogout }) {
                   key={d.id}
                   className="relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-edge bg-panel py-8"
                 >
-                  <span className="text-5xl leading-none">
-                    {flagFor(d.target_language)}
+                  <span className="text-3xl font-bold tracking-tight text-accent">
+                    {d.target_language.toUpperCase()}
                   </span>
                   <span className="font-medium text-ink">{d.name}</span>
                   <button
@@ -136,7 +131,9 @@ export default function Home({ onLogout }) {
                   disabled={busyCode !== null}
                   className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-edge/60 bg-panel/30 py-8 transition hover:border-accent hover:bg-panel/60 active:scale-[0.99] disabled:opacity-40"
                 >
-                  <span className="text-5xl leading-none opacity-90">{lang.flag}</span>
+                  <span className="text-3xl font-bold tracking-tight text-muted">
+                    {lang.code.toUpperCase()}
+                  </span>
                   <span className="font-medium text-muted">
                     {busyCode === lang.code ? "Добавляем…" : lang.label}
                   </span>
