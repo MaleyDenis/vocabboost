@@ -59,6 +59,21 @@ async function handleApi(request, env, url) {
     return json({ error: "method_not_allowed" }, 405);
   }
 
+  const wordsMatch = url.pathname.match(/^\/api\/folders\/(\d+)\/words$/);
+  if (wordsMatch) {
+    const folderId = Number(wordsMatch[1]);
+    if (request.method === "GET") return listWords(env, profileId, folderId);
+    if (request.method === "POST") return createWord(request, env, profileId, folderId);
+    return json({ error: "method_not_allowed" }, 405);
+  }
+
+  const wordMatch = url.pathname.match(/^\/api\/words\/(\d+)$/);
+  if (wordMatch) {
+    const id = Number(wordMatch[1]);
+    if (request.method === "DELETE") return deleteWord(env, profileId, id);
+    return json({ error: "method_not_allowed" }, 405);
+  }
+
   return json({ error: "not_found" }, 404);
 }
 
@@ -145,6 +160,49 @@ async function createFolder(request, env, profileId, dictionaryId) {
 async function deleteFolder(env, profileId, id) {
   const res = await env.DB.prepare(
     "DELETE FROM folders WHERE id = ? AND profile_id = ?"
+  )
+    .bind(id, profileId)
+    .run();
+  if (res.meta.changes === 0) return json({ error: "not_found" }, 404);
+  return new Response(null, { status: 204 });
+}
+
+async function listWords(env, profileId, folderId) {
+  const { results } = await env.DB.prepare(
+    "SELECT id, folder_id, term, translation, example, created_at FROM words WHERE folder_id = ? AND profile_id = ? ORDER BY created_at DESC, id DESC"
+  )
+    .bind(folderId, profileId)
+    .all();
+  return json(results);
+}
+
+async function createWord(request, env, profileId, folderId) {
+  const body = await readJson(request);
+  if (!body) return json({ error: "invalid_json" }, 400);
+  const term = typeof body.term === "string" ? body.term.trim() : "";
+  const translation = typeof body.translation === "string" ? body.translation.trim() : "";
+  const example = typeof body.example === "string" && body.example.trim() ? body.example.trim() : null;
+  if (!term || !translation) {
+    return json({ error: "term and translation are required" }, 400);
+  }
+
+  // INSERT ... SELECT guards ownership: the word is only inserted if the parent
+  // folder belongs to this profile; otherwise RETURNING is null -> 404.
+  const row = await env.DB.prepare(
+    "INSERT INTO words (profile_id, folder_id, term, translation, example) " +
+      "SELECT ?, id, ?, ?, ? FROM folders WHERE id = ? AND profile_id = ? " +
+      "RETURNING id, folder_id, term, translation, example, created_at"
+  )
+    .bind(profileId, term, translation, example, folderId, profileId)
+    .first();
+
+  if (!row) return json({ error: "folder_not_found" }, 404);
+  return json(row, 201);
+}
+
+async function deleteWord(env, profileId, id) {
+  const res = await env.DB.prepare(
+    "DELETE FROM words WHERE id = ? AND profile_id = ?"
   )
     .bind(id, profileId)
     .run();
