@@ -44,6 +44,21 @@ async function handleApi(request, env, url) {
     return json({ error: "method_not_allowed" }, 405);
   }
 
+  const foldersMatch = url.pathname.match(/^\/api\/dictionaries\/(\d+)\/folders$/);
+  if (foldersMatch) {
+    const dictionaryId = Number(foldersMatch[1]);
+    if (request.method === "GET") return listFolders(env, profileId, dictionaryId);
+    if (request.method === "POST") return createFolder(request, env, profileId, dictionaryId);
+    return json({ error: "method_not_allowed" }, 405);
+  }
+
+  const folderMatch = url.pathname.match(/^\/api\/folders\/(\d+)$/);
+  if (folderMatch) {
+    const id = Number(folderMatch[1]);
+    if (request.method === "DELETE") return deleteFolder(env, profileId, id);
+    return json({ error: "method_not_allowed" }, 405);
+  }
+
   return json({ error: "not_found" }, 404);
 }
 
@@ -93,6 +108,46 @@ async function deleteDictionary(env, profileId, id) {
     .bind(id, profileId)
     .run();
 
+  if (res.meta.changes === 0) return json({ error: "not_found" }, 404);
+  return new Response(null, { status: 204 });
+}
+
+async function listFolders(env, profileId, dictionaryId) {
+  const { results } = await env.DB.prepare(
+    "SELECT id, dictionary_id, name, created_at FROM folders WHERE dictionary_id = ? AND profile_id = ? ORDER BY created_at DESC, id DESC"
+  )
+    .bind(dictionaryId, profileId)
+    .all();
+  return json(results);
+}
+
+async function createFolder(request, env, profileId, dictionaryId) {
+  const body = await readJson(request);
+  if (!body) return json({ error: "invalid_json" }, 400);
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name) return json({ error: "name is required" }, 400);
+
+  // INSERT ... SELECT guarantees the parent dictionary belongs to this profile:
+  // if it doesn't, the SELECT yields no row, nothing is inserted, and RETURNING
+  // gives null -> 404. This keeps isolation without a separate lookup.
+  const row = await env.DB.prepare(
+    "INSERT INTO folders (profile_id, dictionary_id, name) " +
+      "SELECT ?, id, ? FROM dictionaries WHERE id = ? AND profile_id = ? " +
+      "RETURNING id, dictionary_id, name, created_at"
+  )
+    .bind(profileId, name, dictionaryId, profileId)
+    .first();
+
+  if (!row) return json({ error: "dictionary_not_found" }, 404);
+  return json(row, 201);
+}
+
+async function deleteFolder(env, profileId, id) {
+  const res = await env.DB.prepare(
+    "DELETE FROM folders WHERE id = ? AND profile_id = ?"
+  )
+    .bind(id, profileId)
+    .run();
   if (res.meta.changes === 0) return json({ error: "not_found" }, 404);
   return new Response(null, { status: 204 });
 }
