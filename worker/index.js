@@ -37,6 +37,13 @@ async function handleApi(request, env, url) {
     return json({ error: "method_not_allowed" }, 405);
   }
 
+  const dictMatch = url.pathname.match(/^\/api\/dictionaries\/(\d+)$/);
+  if (dictMatch) {
+    const id = Number(dictMatch[1]);
+    if (request.method === "DELETE") return deleteDictionary(env, profileId, id);
+    return json({ error: "method_not_allowed" }, 405);
+  }
+
   return json({ error: "not_found" }, 404);
 }
 
@@ -75,6 +82,19 @@ async function createDictionary(request, env, profileId) {
     .bind(profileId, name, targetLanguage)
     .first();
   return json(row, 201);
+}
+
+async function deleteDictionary(env, profileId, id) {
+  // profile_id in the WHERE clause enforces isolation: a profile can only
+  // delete its own dictionaries. Folders/words cascade via the schema.
+  const res = await env.DB.prepare(
+    "DELETE FROM dictionaries WHERE id = ? AND profile_id = ?"
+  )
+    .bind(id, profileId)
+    .run();
+
+  if (res.meta.changes === 0) return json({ error: "not_found" }, 404);
+  return new Response(null, { status: 204 });
 }
 
 async function readJson(request) {
