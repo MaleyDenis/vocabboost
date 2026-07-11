@@ -3,7 +3,7 @@ import { api } from "../api";
 
 // Folders inside a dictionary. Reached by tapping a dictionary card; the back
 // button returns to the dictionary list. Words live one level deeper (next).
-export default function Folders({ dictionary, onBack, onLogout }) {
+export default function Folders({ dictionary, onOpenFolder, onBack, onLogout }) {
   const [folders, setFolders] = useState(null);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -117,13 +117,21 @@ export default function Folders({ dictionary, onBack, onLogout }) {
               {folders.map((f) => (
                 <li
                   key={f.id}
-                  className="flex items-center justify-between rounded-2xl px-4 py-4
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onOpenFolder(f)}
+                  onKeyDown={(e) => e.key === "Enter" && onOpenFolder(f)}
+                  className="flex items-center justify-between rounded-2xl px-4 py-4 cursor-pointer transition
                              bg-panel/35 backdrop-blur-xl border border-white/12
-                             shadow-[0_8px_24px_-14px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.08)]"
+                             shadow-[0_8px_24px_-14px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.08)]
+                             hover:border-accent/60 active:scale-[0.99]"
                 >
                   <span className="font-medium text-ink">{f.name}</span>
                   <button
-                    onClick={() => deleteFolder(f.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteFolder(f.id);
+                    }}
                     aria-label={`Удалить ${f.name}`}
                     className="text-muted hover:text-accent text-lg leading-none transition"
                   >
