@@ -68,9 +68,13 @@ export default function Home({ onLogout }) {
   const available = LANGUAGES.filter((l) => !usedCodes.has(l.code));
 
   return (
-    <div className="min-h-dvh bg-page">
-      <header className="flex items-center justify-between px-5 h-16 border-b border-edge/40">
-        <h1 className="bg-accent text-ink px-2 py-0.5 text-base font-bold tracking-tight">
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-10 flex items-center justify-between px-5 h-16
+                         bg-panel/25 backdrop-blur-xl border-b border-white/10">
+        <h1 className="flex items-center gap-2 text-base font-bold tracking-tight">
+          <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-extrabold
+                           bg-gradient-to-br from-accent to-[#8b2fbf]
+                           shadow-[inset_0_1px_0_rgba(255,255,255,.25)]">V</span>
           VocabBoost
         </h1>
         <button
@@ -98,7 +102,9 @@ export default function Home({ onLogout }) {
               {dictionaries.map((d) => (
                 <div
                   key={d.id}
-                  className="relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-edge bg-panel py-8"
+                  className="relative flex flex-col items-center justify-center gap-2 rounded-2xl py-8
+                             bg-panel/35 backdrop-blur-xl border border-white/12
+                             shadow-[0_10px_30px_-12px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.10)]"
                 >
                   <span className="text-3xl font-bold tracking-tight text-accent">
                     {d.target_language.toUpperCase()}
@@ -129,7 +135,9 @@ export default function Home({ onLogout }) {
                   key={lang.code}
                   onClick={() => createDictionary(lang)}
                   disabled={busyCode !== null}
-                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-edge/60 bg-panel/30 py-8 transition hover:border-accent hover:bg-panel/60 active:scale-[0.99] disabled:opacity-40"
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl py-8 transition
+                             bg-panel/15 backdrop-blur-md border border-dashed border-white/20
+                             hover:border-accent hover:bg-panel/30 active:scale-[0.99] disabled:opacity-40"
                 >
                   <span className="text-3xl font-bold tracking-tight text-muted">
                     {lang.code.toUpperCase()}
