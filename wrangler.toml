@@ -1,0 +1,17 @@
+name = "vocabboost"
+main = "worker/index.js"
+compatibility_date = "2025-07-01"
+
+# Serve the built frontend. The worker handles /api/*; anything else is a
+# static asset, with SPA fallback to index.html for client-side routes.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# D1 database. Local dev uses a SQLite file under .wrangler/ and ignores
+# database_id; production uses the real id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "vocabboost"
+database_id = "bf458315-6c29-47f1-bc5e-379a2ca42eef"
