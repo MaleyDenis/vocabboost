@@ -8,7 +8,7 @@
   --color-accent: #e0389f;
   --color-ink: #f4eefb;
   --color-muted: #b39ddb;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 :root {
@@ -16,7 +16,7 @@
 }
 
 body {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   background-color: var(--color-page);
   color: var(--color-ink);
 }
