@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+/* Sentry-wizard-inspired theme: deep violet, monospace, magenta accents. */
+@theme {
+  --color-page: #1a0f2e;
+  --color-panel: #3f2277;
+  --color-edge: #7c4dbe;
+  --color-accent: #e0389f;
+  --color-ink: #f4eefb;
+  --color-muted: #b39ddb;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-mono);
+  background-color: var(--color-page);
+  color: var(--color-ink);
+}

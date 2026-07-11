@@ -1,21 +1,24 @@
 import { useEffect, useState } from "react";
 import { api, clearSecret } from "../api";
 
-// Preset target languages — keeps things tidy and avoids typos. Extend freely.
+// A dictionary is a language. There are only a handful, so we show them as big
+// tiles: existing ones as cards, the rest as "add" tiles (tap = create). One
+// dictionary per language — the UI only offers languages you don't have yet.
 const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "pl", label: "Polski" },
-  { code: "de", label: "Deutsch" },
-  { code: "es", label: "Español" },
+  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "pl", label: "Polski", flag: "🇵🇱" },
+  { code: "de", label: "Deutsch", flag: "🇩🇪" },
+  { code: "es", label: "Español", flag: "🇪🇸" },
+  { code: "fr", label: "Français", flag: "🇫🇷" },
+  { code: "it", label: "Italiano", flag: "🇮🇹" },
 ];
+
+const flagFor = (code) => LANGUAGES.find((l) => l.code === code)?.flag ?? "🏳️";
 
 export default function Home({ onLogout }) {
   const [dictionaries, setDictionaries] = useState(null);
   const [error, setError] = useState("");
-
-  const [name, setName] = useState("");
-  const [language, setLanguage] = useState(LANGUAGES[0].code);
-  const [saving, setSaving] = useState(false);
+  const [busyCode, setBusyCode] = useState(null);
 
   useEffect(() => {
     load();
@@ -35,25 +38,21 @@ export default function Home({ onLogout }) {
     }
   }
 
-  async function createDictionary(e) {
-    e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed || saving) return;
-
-    setSaving(true);
+  async function createDictionary(lang) {
+    if (busyCode) return;
+    setBusyCode(lang.code);
     setError("");
     try {
       const created = await api("/dictionaries", {
         method: "POST",
-        body: JSON.stringify({ name: trimmed, target_language: language }),
+        body: JSON.stringify({ name: lang.label, target_language: lang.code }),
       });
       setDictionaries((prev) => [created, ...(prev ?? [])]);
-      setName("");
     } catch (err) {
       if (err.status === 401) logout();
       else setError("Не удалось создать словарь");
     } finally {
-      setSaving(false);
+      setBusyCode(null);
     }
   }
 
@@ -69,89 +68,83 @@ export default function Home({ onLogout }) {
     }
   }
 
+  // Languages not yet added — offered as "create" tiles.
+  const usedCodes = new Set((dictionaries ?? []).map((d) => d.target_language));
+  const available = LANGUAGES.filter((l) => !usedCodes.has(l.code));
+
   return (
-    <div className="min-h-dvh bg-slate-50">
-      <header className="flex items-center justify-between px-5 h-16 border-b border-slate-100 bg-white">
-        <h1 className="text-lg font-semibold text-slate-900">VocabBoost</h1>
+    <div className="min-h-dvh bg-page">
+      <header className="flex items-center justify-between px-5 h-16 border-b border-edge/40">
+        <h1 className="bg-accent text-ink px-2 py-0.5 text-base font-bold tracking-tight">
+          VocabBoost
+        </h1>
         <button
           onClick={logout}
-          className="text-sm text-slate-500 hover:text-slate-900 transition"
+          className="text-sm text-muted hover:text-ink transition"
         >
-          Выйти
+          выйти
         </button>
       </header>
 
-      <main className="max-w-md mx-auto px-5 py-6 flex flex-col gap-6">
-        {/* Create form */}
-        <form onSubmit={createDictionary} className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-slate-500">Новый словарь</h2>
-          <div className="flex gap-2">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Название (например, English)"
-              className="flex-1 h-12 rounded-2xl border border-slate-200 px-4 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-            />
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="h-12 rounded-2xl border border-slate-200 px-3 text-base bg-white outline-none focus:border-indigo-500"
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            type="submit"
-            disabled={saving || !name.trim()}
-            className="h-12 rounded-2xl bg-indigo-600 text-white text-base font-medium transition active:scale-[0.99] hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? "Добавляем…" : "Добавить словарь"}
-          </button>
-        </form>
+      <main className="max-w-md mx-auto px-5 py-6 flex flex-col gap-8">
+        {error && <p className="text-sm text-accent">{error}</p>}
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {dictionaries === null && !error && (
+          <p className="text-sm text-muted">Загрузка…</p>
+        )}
 
-        {/* List */}
-        <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-slate-500">Словари</h2>
-
-          {dictionaries === null && !error && (
-            <p className="text-sm text-slate-400">Загрузка…</p>
-          )}
-
-          {dictionaries !== null && dictionaries.length === 0 && (
-            <p className="text-sm text-slate-400">Пока пусто — создайте первый словарь.</p>
-          )}
-
-          {dictionaries !== null && dictionaries.length > 0 && (
-            <ul className="flex flex-col gap-2">
+        {/* Existing dictionaries */}
+        {dictionaries !== null && dictionaries.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted">
+              Ваши словари
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
               {dictionaries.map((d) => (
-                <li
+                <div
                   key={d.id}
-                  className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3"
+                  className="relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-edge bg-panel py-8"
                 >
-                  <span>
-                    <span className="font-medium text-slate-900">{d.name}</span>
-                    <span className="ml-2 text-xs uppercase text-slate-400">
-                      {d.target_language}
-                    </span>
+                  <span className="text-5xl leading-none">
+                    {flagFor(d.target_language)}
                   </span>
+                  <span className="font-medium text-ink">{d.name}</span>
                   <button
                     onClick={() => deleteDictionary(d.id)}
-                    className="text-sm text-slate-400 hover:text-red-500 transition"
                     aria-label={`Удалить ${d.name}`}
+                    className="absolute top-2 right-3 text-muted hover:text-accent text-lg transition"
                   >
-                    Удалить
+                    ×
                   </button>
-                </li>
+                </div>
               ))}
-            </ul>
-          )}
-        </div>
+            </div>
+          </section>
+        )}
+
+        {/* Add a language */}
+        {dictionaries !== null && available.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-muted">
+              {dictionaries.length > 0 ? "Добавить язык" : "Выберите язык"}
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {available.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => createDictionary(lang)}
+                  disabled={busyCode !== null}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-edge/60 bg-panel/30 py-8 transition hover:border-accent hover:bg-panel/60 active:scale-[0.99] disabled:opacity-40"
+                >
+                  <span className="text-5xl leading-none opacity-90">{lang.flag}</span>
+                  <span className="font-medium text-muted">
+                    {busyCode === lang.code ? "Добавляем…" : lang.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
