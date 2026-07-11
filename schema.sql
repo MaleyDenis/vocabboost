@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS folders (
 CREATE INDEX IF NOT EXISTS idx_folders_dictionary ON folders(dictionary_id);
 CREATE INDEX IF NOT EXISTS idx_folders_profile    ON folders(profile_id);
 
+-- Progress fields (progress / correct_streak / last_reviewed) will be added
+-- back together with the practice/exercise feature — omitted for now (YAGNI).
 CREATE TABLE IF NOT EXISTS words (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   profile_id    INTEGER NOT NULL REFERENCES profiles(id),
@@ -42,9 +44,6 @@ CREATE TABLE IF NOT EXISTS words (
   term          TEXT NOT NULL,
   translation   TEXT NOT NULL,
   example       TEXT,
-  progress      INTEGER NOT NULL DEFAULT 0,
-  correct_streak INTEGER NOT NULL DEFAULT 0,
-  last_reviewed TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_words_folder  ON words(folder_id);
