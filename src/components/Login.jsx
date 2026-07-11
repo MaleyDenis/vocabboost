@@ -30,16 +30,23 @@ export default function Login({ onSuccess }) {
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-page px-4">
+    <div className="min-h-dvh flex items-center justify-center px-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-panel border-2 border-accent rounded-2xl p-8 flex flex-col gap-6"
+        className="w-full max-w-sm flex flex-col gap-6 rounded-[28px] p-8
+                   bg-panel/35 backdrop-blur-2xl border border-white/15
+                   shadow-[0_20px_60px_-15px_rgba(0,0,0,.6),inset_0_1px_0_rgba(255,255,255,.14)]"
       >
-        <div className="flex flex-col gap-1">
-          <h1 className="inline-block self-start bg-accent text-ink px-2 py-0.5 text-lg font-bold tracking-tight">
-            VocabBoost
-          </h1>
-          <p className="mt-2 text-sm text-muted">Введите пароль для входа.</p>
+        <div className="flex flex-col gap-4">
+          <div className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-2xl font-extrabold
+                          bg-gradient-to-br from-accent to-[#8b2fbf]
+                          shadow-[inset_0_1px_0_rgba(255,255,255,.25)]">
+            V
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">VocabBoost</h1>
+            <p className="mt-1 text-sm text-muted">Введите пароль для входа</p>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -50,7 +57,7 @@ export default function Login({ onSuccess }) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="пароль"
-            className="h-12 rounded-xl bg-page/60 border border-edge px-4 text-base text-ink placeholder:text-muted/60 outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+            className="h-12 rounded-2xl bg-page/40 border border-white/20 px-4 text-base text-ink placeholder:text-muted/55 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
           />
           {error && <p className="text-sm text-accent">{error}</p>}
         </div>
@@ -58,9 +65,12 @@ export default function Login({ onSuccess }) {
         <button
           type="submit"
           disabled={loading || !value.trim()}
-          className="h-12 rounded-xl bg-accent text-ink text-base font-bold transition active:scale-[0.99] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="h-12 rounded-2xl text-ink text-base font-bold transition active:scale-[0.99]
+                     bg-gradient-to-br from-accent to-[#a52d97] hover:brightness-110
+                     shadow-[0_8px_24px_-6px_rgba(224,56,159,.6)]
+                     disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         >
-          {loading ? "Проверяем…" : "Войти →"}
+          {loading ? "Проверяем…" : "Войти"}
         </button>
       </form>
     </div>

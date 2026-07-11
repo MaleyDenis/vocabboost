@@ -17,6 +17,11 @@
 
 body {
   font-family: var(--font-ui);
-  background-color: var(--color-page);
   color: var(--color-ink);
+  min-height: 100dvh;
+  /* Living gradient backdrop for the glass surfaces to sit on. */
+  background:
+    radial-gradient(120% 120% at 15% 0%, #4a2a8a 0%, #1a0f2e 52%, #0d0718 100%),
+    #0d0718;
+  background-attachment: fixed;
 }
