@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, clearSecret } from "../api";
+import { api } from "../api";
 
 // A dictionary is a language. There are only a handful, so we show them as big
 // tiles: existing ones as cards, the rest as "add" tiles (tap = create). One
@@ -10,7 +10,7 @@ const LANGUAGES = [
   { code: "pl", label: "Polski" },
 ];
 
-export default function Home({ onLogout }) {
+export default function Home({ onOpen, onLogout }) {
   const [dictionaries, setDictionaries] = useState(null);
   const [error, setError] = useState("");
   const [busyCode, setBusyCode] = useState(null);
@@ -19,16 +19,11 @@ export default function Home({ onLogout }) {
     load();
   }, []);
 
-  function logout() {
-    clearSecret();
-    onLogout();
-  }
-
   async function load() {
     try {
       setDictionaries(await api("/dictionaries"));
     } catch (err) {
-      if (err.status === 401) logout();
+      if (err.status === 401) onLogout();
       else setError("Не удалось загрузить словари");
     }
   }
@@ -44,7 +39,7 @@ export default function Home({ onLogout }) {
       });
       setDictionaries((prev) => [created, ...(prev ?? [])]);
     } catch (err) {
-      if (err.status === 401) logout();
+      if (err.status === 401) onLogout();
       else setError("Не удалось создать словарь");
     } finally {
       setBusyCode(null);
@@ -58,7 +53,7 @@ export default function Home({ onLogout }) {
       await api(`/dictionaries/${id}`, { method: "DELETE" });
       setDictionaries((prev) => prev.filter((d) => d.id !== id));
     } catch (err) {
-      if (err.status === 401) logout();
+      if (err.status === 401) onLogout();
       else setError("Не удалось удалить словарь");
     }
   }
@@ -78,7 +73,7 @@ export default function Home({ onLogout }) {
           VocabBoost
         </h1>
         <button
-          onClick={logout}
+          onClick={onLogout}
           className="text-sm text-muted hover:text-ink transition"
         >
           выйти
@@ -102,18 +97,26 @@ export default function Home({ onLogout }) {
               {dictionaries.map((d) => (
                 <div
                   key={d.id}
-                  className="relative flex flex-col items-center justify-center gap-2 rounded-2xl py-8
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onOpen(d)}
+                  onKeyDown={(e) => e.key === "Enter" && onOpen(d)}
+                  className="relative flex flex-col items-center justify-center gap-2 rounded-2xl py-8 text-center cursor-pointer transition
                              bg-panel/35 backdrop-blur-xl border border-white/12
-                             shadow-[0_10px_30px_-12px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.10)]"
+                             shadow-[0_10px_30px_-12px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.10)]
+                             hover:border-accent/60 active:scale-[0.99]"
                 >
                   <span className="text-3xl font-bold tracking-tight text-accent">
                     {d.target_language.toUpperCase()}
                   </span>
                   <span className="font-medium text-ink">{d.name}</span>
                   <button
-                    onClick={() => deleteDictionary(d.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteDictionary(d.id);
+                    }}
                     aria-label={`Удалить ${d.name}`}
-                    className="absolute top-2 right-3 text-muted hover:text-accent text-lg transition"
+                    className="absolute top-2 right-3 text-muted hover:text-accent text-lg leading-none transition"
                   >
                     ×
                   </button>
