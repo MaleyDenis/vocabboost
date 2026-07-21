@@ -126,14 +126,19 @@ export default function Folders({ dictionary, onOpenFolder, onBack, onLogout }) 
                              shadow-[0_8px_24px_-14px_rgba(0,0,0,.5),inset_0_1px_0_rgba(255,255,255,.08)]
                              hover:border-accent/60 active:scale-[0.99]"
                 >
-                  <span className="font-medium text-ink">{f.name}</span>
+                  <span className="flex items-baseline gap-2 min-w-0">
+                    <span className="font-medium text-ink truncate">{f.name}</span>
+                    <span className="shrink-0 text-xs text-muted tabular-nums">
+                      {f.word_count ?? 0}
+                    </span>
+                  </span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteFolder(f.id);
                     }}
                     aria-label={`Удалить ${f.name}`}
-                    className="text-muted hover:text-accent text-lg leading-none transition"
+                    className="shrink-0 ml-2 text-muted hover:text-accent text-lg leading-none transition"
                   >
                     ×
                   </button>
