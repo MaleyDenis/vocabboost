@@ -6,6 +6,11 @@
  * SECRET_DZIANIS / SECRET_YULIA env vars to resolve a fixed profile_id. Every
  * SQL query then filters by that profile_id (data isolation between profiles).
  */
+// Active exercise types. Each word gets one SM-2 card per type on creation, and
+// a word is only "fully learned" once every card matures. Adding a type here
+// requires a backfill migration to give existing words the new card.
+const EXERCISE_TYPES = ["recognition", "production"];
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -71,6 +76,13 @@ async function handleApi(request, env, url) {
   if (wordMatch) {
     const id = Number(wordMatch[1]);
     if (request.method === "DELETE") return deleteWord(env, profileId, id);
+    return json({ error: "method_not_allowed" }, 405);
+  }
+
+  const reviewMatch = url.pathname.match(/^\/api\/cards\/(\d+)\/review$/);
+  if (reviewMatch) {
+    const id = Number(reviewMatch[1]);
+    if (request.method === "POST") return reviewCard(request, env, profileId, id);
     return json({ error: "method_not_allowed" }, 405);
   }
 
@@ -203,6 +215,18 @@ async function createWord(request, env, profileId, folderId) {
     .first();
 
   if (!row) return json({ error: "folder_not_found" }, 404);
+
+  // Eagerly create one SM-2 card per exercise type so the new word is a due
+  // card immediately (due_at NULL = due now). If the word already had cards
+  // (e.g. a retried request), the UNIQUE constraint makes this a no-op.
+  await env.DB.batch(
+    EXERCISE_TYPES.map((type) =>
+      env.DB.prepare(
+        "INSERT OR IGNORE INTO cards (profile_id, word_id, exercise_type) VALUES (?, ?, ?)"
+      ).bind(profileId, row.id, type)
+    )
+  );
+
   return json(row, 201);
 }
 
@@ -214,6 +238,68 @@ async function deleteWord(env, profileId, id) {
     .run();
   if (res.meta.changes === 0) return json({ error: "not_found" }, 404);
   return new Response(null, { status: 204 });
+}
+
+// SM-2 review. Grades: again / hard / good / easy. All scheduling math is here
+// on the server; the exercise UI just reports which grade the answer earned.
+async function reviewCard(request, env, profileId, id) {
+  const body = await readJson(request);
+  if (!body) return json({ error: "invalid_json" }, 400);
+  const grade = body.grade;
+  if (!["again", "hard", "good", "easy"].includes(grade)) {
+    return json({ error: "grade must be again|hard|good|easy" }, 400);
+  }
+
+  const card = await env.DB.prepare(
+    "SELECT interval_days, ease, reps, lapses FROM cards WHERE id = ? AND profile_id = ?"
+  )
+    .bind(id, profileId)
+    .first();
+  if (!card) return json({ error: "not_found" }, 404);
+
+  const next = schedule(card, grade);
+
+  // due_at is computed in SQL so its text format matches created_at/datetime('now')
+  // and stays comparable in the session selector. interval 0 (again) -> due now.
+  const row = await env.DB.prepare(
+    "UPDATE cards SET interval_days = ?, ease = ?, reps = ?, lapses = ?, " +
+      "due_at = datetime('now', ? || ' days'), last_reviewed = datetime('now') " +
+      "WHERE id = ? AND profile_id = ? " +
+      "RETURNING id, word_id, exercise_type, due_at, interval_days, ease, reps, lapses, last_reviewed"
+  )
+    .bind(next.interval_days, next.ease, next.reps, next.lapses, `+${next.interval_days}`, id, profileId)
+    .first();
+
+  return json(row);
+}
+
+// One SM-2 step. Returns the new scheduling fields for the card. Intervals are
+// whole days; "again" schedules the card for now (0 days) so it returns this
+// session. ease floors at 1.3.
+function schedule(card, grade) {
+  const MIN_EASE = 1.3;
+  let { interval_days: interval, ease, reps, lapses } = card;
+
+  if (grade === "again") {
+    reps = 0;
+    lapses += 1;
+    ease = Math.max(MIN_EASE, ease - 0.2);
+    interval = 0;
+  } else if (grade === "hard") {
+    reps += 1;
+    ease = Math.max(MIN_EASE, ease - 0.15);
+    interval = interval === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
+  } else if (grade === "good") {
+    reps += 1;
+    interval = interval === 0 ? 1 : interval === 1 ? 3 : Math.round(interval * ease);
+  } else {
+    // easy
+    reps += 1;
+    ease = ease + 0.15;
+    interval = interval === 0 ? 4 : Math.round(interval * ease * 1.3);
+  }
+
+  return { interval_days: interval, ease: Number(ease.toFixed(2)), reps, lapses };
 }
 
 async function readJson(request) {

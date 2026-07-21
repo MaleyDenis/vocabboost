@@ -48,3 +48,25 @@ CREATE TABLE IF NOT EXISTS words (
 );
 CREATE INDEX IF NOT EXISTS idx_words_folder  ON words(folder_id);
 CREATE INDEX IF NOT EXISTS idx_words_profile ON words(profile_id);
+
+-- SM-2 spaced-repetition state, one card per (word, exercise_type). Progress is
+-- per exercise type on purpose: recognition and production are separate skills,
+-- so a word is "fully learned" only when all of its cards mature. Cards are
+-- created by the worker when a word is added (one per active exercise type).
+-- See migrations/ for how this reaches an already-populated database.
+CREATE TABLE IF NOT EXISTS cards (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  profile_id    INTEGER NOT NULL REFERENCES profiles(id),
+  word_id       INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
+  exercise_type TEXT    NOT NULL,
+  due_at        TEXT,                        -- next review; NULL = due now (new card)
+  interval_days INTEGER NOT NULL DEFAULT 0,
+  ease          REAL    NOT NULL DEFAULT 2.5,-- floor 1.3
+  reps          INTEGER NOT NULL DEFAULT 0,
+  lapses        INTEGER NOT NULL DEFAULT 0,
+  last_reviewed TEXT,
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(word_id, exercise_type)
+);
+CREATE INDEX IF NOT EXISTS idx_cards_due  ON cards(profile_id, due_at);
+CREATE INDEX IF NOT EXISTS idx_cards_word ON cards(word_id);
