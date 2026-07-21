@@ -128,8 +128,14 @@ async function deleteDictionary(env, profileId, id) {
 }
 
 async function listFolders(env, profileId, dictionaryId) {
+  // word_count via a correlated subquery so the folder list can show how full a
+  // theme is without opening it. A theme is one folder; we never split it, so
+  // the count is expected to grow large and stays purely informational.
   const { results } = await env.DB.prepare(
-    "SELECT id, dictionary_id, name, created_at FROM folders WHERE dictionary_id = ? AND profile_id = ? ORDER BY created_at DESC, id DESC"
+    "SELECT f.id, f.dictionary_id, f.name, f.created_at, " +
+      "(SELECT COUNT(*) FROM words w WHERE w.folder_id = f.id) AS word_count " +
+      "FROM folders f WHERE f.dictionary_id = ? AND f.profile_id = ? " +
+      "ORDER BY f.created_at DESC, f.id DESC"
   )
     .bind(dictionaryId, profileId)
     .all();
